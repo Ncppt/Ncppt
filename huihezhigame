@@ -1,0 +1,244 @@
+import sys
+from time import sleep as slp
+
+
+
+class Player:
+    def __init__(self,name,conditions,skills,position):
+        self.name=name
+        self.conditions=conditions
+        self.skills=skills
+        self.position=position
+ 
+
+    def show(self):
+        Buff=[]
+        print(" ")
+        print("角色信息")
+        slp(t)
+        print(self.name,end="")
+        hp=self.conditions[6][0]
+        total=self.conditions[6][1]
+        percent=int((hp/total)*100)
+        print(hp,"/",total,"{}%".format(percent),"▉"*(percent//10))
+        slp(t)
+        
+
+        if self.conditions[0]:
+           Buff.append(f"无法行动回合数{self.conditions[0]}")
+        if self.conditions[1][0]:
+            Buff.append(f"增伤{self.conditions[1][0]} 回合数{self.conditions[1][1]}")
+        if self.conditions[2][0]:
+            Buff.append(f"减伤{self.conditions[2][0]} 回合数{self.conditions[2][1]}")
+
+        Buff.append(f"速度{self.conditions[4]}")
+        if self.conditions[5]!=[]:
+            Buff.append(self.conditions[5])
+        for buff in Buff:
+            print(buff)
+            slp(t)
+        print("-----------")
+
+
+
+
+
+#初值--------------------
+name="小火龙"
+conditions=[0,[0,0],[0,0],100,10,{},[500,500]]
+conditions1=[0,[0,0],[0,0],100,10,{},[500,500]]
+skills=[["喷火",0,0],["烈焰",0,2]]
+skills1=[["喷水",0,0]]
+position1=0
+position2=1
+t=0.25
+all_skills={"喷火":[0,[0.5,1],[0,0],1.5,0,[],0],"烈焰":[0,[0,0],[0,0],1,0,["灼烧",1],0]}
+
+all_buffs={"灼烧": [0,[0,0],[0,0],0,0,[],25] }
+
+pa=Player("小火龙",conditions,skills,position1)
+
+pb=Player("小水龙",conditions1,skills1,position2)
+
+#初值-------------------
+
+def use_skills(ski_name,pla,plb):
+    to_pa,to_pb=[0,[0,0],[0,0],0,0,[],0],[0,[0,0],[0,0],0,0,[],0]
+    
+    if ski_name=="喷火" or ski_name=="喷水":
+        
+        dmg=all_skills["喷火"]
+        to_pa[1]=dmg[1]
+        to_pa[2]=dmg[2]
+        to_pa[4]=dmg[4]
+        to_pb[6]=-(pla.conditions[3]*dmg[3]*(1+pla.conditions[1][0])*(1-plb.conditions[2][0]))
+        
+        to_pb[0]=dmg[0]
+        
+        if pla.position==0:
+            return[to_pa,to_pb]
+        else:
+            return [to_pb,to_pa]
+
+
+  
+    if ski_name=="烈焰":
+        
+        dmg=all_skills["烈焰"]
+        to_pa[1]=dmg[1]
+        to_pa[2]=dmg[2]
+        to_pa[4]=dmg[4]
+        to_pb[6]=-(pla.conditions[3]*dmg[3]*(1+pla.conditions[1][0])*(1-plb.conditions[2][0]))
+        if dmg[5][0] not in plb.conditions[5]:
+            to_pb[5]=dmg[5]
+        to_pb[0]=dmg[0]    
+        if pla.position==0:
+            return[to_pa,to_pb]
+        else:
+            return [to_pb,to_pa]
+      
+def buff_use(pla):
+    pass
+
+
+
+
+
+def move(pla,plb):
+    t1=0
+    print(" ")
+    print(pla.name,"行动")
+    slp(t)
+    for skill in pla.skills:
+        print(" ")
+        print(t1,skill[0],"cd:",skill[1],"使用cd",skill[2])
+        t1+=1
+    while True:
+        choose=int(str(input("选择技能")))
+        if pla.skills[choose][1]>0:
+            print(" ")
+            print("冷却中")    
+            slp(t)
+        else:
+            pla.skills[choose][1]=pla.skills[choose][2]
+            print(" ")
+            print(pla.name,"使用了",pla.skills[choose][0])
+            slp(t)
+            break
+    return use_skills(pla.skills[choose][0],pla,plb)
+
+
+def judge_move(pa1,pa2):
+
+    if pa1.conditions[0]:
+        print(" ")
+        print(f"{pa1.name}无法行动")
+        return [[pa2,pa1]]
+    if pa2.conditions[0]:
+        print(" ")
+        print(f"{pa2.name}无法行动")
+        return[[pa1,pa2]]
+
+    if pa1.conditions[4]>=pa2.conditions[4]:
+        return [[pa1,pa2],[pa2,pa1]]
+    else: return [[pa2,pa1],[pa1,pa2]]
+
+def refresh(pla,to,flag1):
+    
+    if pla.position==0:
+        to_=to[0]
+    else: to_=to[1]
+
+    if pla.conditions[0] and flag1:
+        pla.conditions[0]-=1
+
+    if to_[0]:
+        pla.conditions[0]=to_[0]
+
+    if pla.conditions[1][1] and flag1:
+        pla.conditions[1][1]-=1
+        if pla.conditions[1][1]:
+            pla.conditions[1][0]=0
+    if to_[1][1]:
+        pla.conditions[1][1]=to_[1][1]
+        pla.conditions[1][0]=to_[1][0]
+    if pla.conditions[2][1] and flag1:
+        pla.conditions[2][1]-=1
+        if pla.conditions[2][1]==0:
+            pla.conditions[2][0]=0
+
+    if to_[2][1]:
+        pla.conditions[2][1]=to_[2][1]
+        pla.conditions[2][0]=to_[2][1]
+    for buf in list(pla.conditions[5]):
+        if pla.conditions[5][buf] and flag1:
+            buff_use(pla)
+            pla.conditions[5][buf]-=1
+        if pla.conditions[5][buf]==0:
+            del pla.conditions[5][buf]
+    for skill in pla.skills:
+        if skill[1] and flag1:
+            skill[1]-=1
+
+
+
+
+    if to_[5]!=[]:
+        pla.conditions[5][to_[5][0]]=to_[5][1]
+    
+
+
+    if pla.conditions[6][0]+to_[6]>pla.conditions[6][1]:
+        pla.conditions[6][0]=pla.conditions[6][1]
+
+    else:
+        pla.conditions[6][0]+=to_[6]
+
+
+def main_battle(pla,plb):
+    n=1;flag1=False
+    while True:
+        if pla.conditions[6][0]<=0:
+            print(" ")
+            print(f"{pla.name}失败")
+            break
+        elif plb.conditions[6][0]<=0:
+            print(" ")
+            print(f"{plb.name}失败")
+            break
+        else:
+            print("-----------")
+            print("回合",n)
+            flag=judge_move(pa,pb)
+            for pl in flag:
+              
+                to=move(pl[0],pl[1])
+                
+                refresh(pla,to,flag1)
+                refresh(plb,to,flag1)
+                pa.show()
+                pb.show()
+                if pl[1].conditions[0]:
+                   print(" ")
+                   print(f"{pl[1].name}无法行动")
+                   break
+                if pla.conditions[6][0]<=0:
+                    print(" ")
+                    print(f"{pla.name}失败")
+                    break
+                elif plb.conditions[6][0]<=0:
+                    print(" ")
+                    print(f"{plb.name}失败")
+                    break
+                flag1=not flag1
+            n+=1
+
+
+main_battle(pa,pb)
+
+
+
+
+
+
+
